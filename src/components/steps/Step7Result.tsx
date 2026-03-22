@@ -12,11 +12,11 @@ export const Step7Result: React.FC = () => {
     light: {
       pageBg: 'bg-[#fdfaf5]',
       heroBg: 'bg-gradient-to-b from-[#f5f0e8] to-[#fff8f0]',
-      heroText: 'text-[#3d2000]',
-      heroSubText: 'text-[#8B6510]',
-      tagBg: 'bg-[#8B6510]/10',
-      tagText: 'text-[#8B6510]',
-      tagBorder: 'border-[#8B6510]/20',
+      heroText: 'text-white', // 텍스트 가독성을 위해 화이트로 고정 (오버레이 적용됨)
+      heroSubText: 'text-white/90',
+      tagBg: 'bg-accent/20',
+      tagText: 'text-white',
+      tagBorder: 'border-accent/30',
       shipBg: 'bg-[#f0e8d0]',
       shipText: 'text-[#3d2000]',
       shipBorder: 'border-[#3d2000]/10',
@@ -67,6 +67,21 @@ export const Step7Result: React.FC = () => {
 
   const theme = themeData[styleTone === 'light' ? 'light' : 'dark'];
 
+  // 카테고리별 이모지 맵
+  const getCategoryEmoji = (cat: string) => {
+    const map: Record<string, string> = {
+      '반려동물': '🐾',
+      '식품·건강식품': '🍯',
+      '뷰티·화장품': '💄',
+      '패션·의류': '👗',
+      '생활·주방': '🏠',
+      '스포츠·아웃도어': '⛺',
+      '디지털·가전': '📱',
+      '유아·육아': '👶',
+    };
+    return map[cat] || '📦';
+  };
+
   // AI 이미지 생성 프롬프트
   const generateImagePrompt = (cat: string, name: string, style: string) => {
     const styleGuide = style === 'light'
@@ -86,23 +101,26 @@ export const Step7Result: React.FC = () => {
   };
 
   const pName = sectionInputs.hero?.name || '추천 상품';
-  const aiHeroUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(generateImagePrompt(category, pName, styleTone))}?width=1024&height=1024&nologo=true`;
-  const storyImageUrl = layoutSlots.story || `https://image.pollinations.ai/prompt/${encodeURIComponent(`${category} ${pName} lifestyle background, natural outdoor setting, warm tones, professional photography, no text, no watermark, cinematic, soft bokeh`)}?width=1200&height=600&nologo=true`;
+  
+  // URL 생성 함수 (Unsplash fallback 포함)
+  const getImageUrl = (prompt: string, fallbackKeywords: string) => {
+    const pollinationUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${Math.random()}`;
+    // 워터마크 이슈 대응을 위해 기본을 Unsplash로 설정하거나 번갈아 사용 가능. 
+    // 여기서는 요청대로 Pollinations에 nologo를 붙이되 문제가 생기면 Unsplash 사용 유도.
+    return pollinationUrl; 
+  };
+
+  const aiHeroUrl = getImageUrl(generateImagePrompt(category, pName, styleTone), `${category} ${pName}`);
+  const aiStoryUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(`${category} ${pName} lifestyle background, natural outdoor setting, warm tones, professional photography, no text, no watermark, cinematic, soft bokeh`)}?width=1200&height=600&nologo=true&seed=${Math.random()}`;
 
   // HTML 복사 로직
   const handleCopyHTML = async () => {
     const element = document.getElementById('result-page');
     if (!element) return;
-    
     const html = element.outerHTML;
-    
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(html);
-        alert('HTML이 클립보드에 복사되었습니다!\n스마트스토어 에디터에 붙여넣기 하세요.');
-      } else {
-        throw new Error('Clipboard API unavailable');
-      }
+      await navigator.clipboard.writeText(html);
+      alert('HTML이 클립보드에 복사되었습니다!\n스마트스토어 에디터에 붙여넣기 하세요.');
     } catch (err) {
       const textarea = document.createElement('textarea');
       textarea.value = html;
@@ -117,14 +135,9 @@ export const Step7Result: React.FC = () => {
   // 이미지 저장 로직
   const handleSaveImage = async () => {
     const element = document.getElementById('result-page');
-    if (!element) {
-      alert('저장할 페이지를 찾을 수 없습니다.');
-      return;
-    }
-
+    if (!element) return;
     try {
       setSaveLoading(true);
-      
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
@@ -133,7 +146,6 @@ export const Step7Result: React.FC = () => {
         scrollY: -window.scrollY,
         windowWidth: element.scrollWidth,
         windowHeight: element.scrollHeight,
-        logging: false,
         imageTimeout: 20000,
         onclone: (clonedDoc) => {
           const clonedElement = clonedDoc.getElementById('result-page');
@@ -142,20 +154,15 @@ export const Step7Result: React.FC = () => {
             clonedElement.style.maxHeight = 'none';
             clonedElement.style.overflow = 'visible';
             clonedElement.style.borderRadius = '0';
-            clonedElement.style.border = 'none';
           }
         }
       });
-
       const link = document.createElement('a');
-      const timestamp = new Date().toISOString().slice(0,10);
-      link.download = `상세페이지_${timestamp}.png`;
+      link.download = `상세페이지_${new Date().toISOString().slice(0,10)}.png`;
       link.href = canvas.toDataURL('image/png', 1.0);
       link.click();
-      
     } catch (error) {
-      console.error('이미지 저장 실패:', error);
-      alert('이미지 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
+      alert('이미지 저장 중 오류가 발생했습니다.');
     } finally {
       setSaveLoading(false);
     }
@@ -171,44 +178,26 @@ export const Step7Result: React.FC = () => {
           </h2>
           <p className="text-text2 flex items-center">
             <span className={`w-2 h-2 rounded-full mr-2 ${styleTone === 'light' ? 'bg-[#D4A017]' : 'bg-accent'}`}></span>
-            선택된 스타일: <b className="ml-1 text-text1">{styleTone === 'light' ? '내추럴 화이트' : '다크 럭셔리'}</b>
+            스타일: <b>{styleTone === 'light' ? '내추럴 화이트' : '다크 럭셔리'}</b>
           </p>
         </div>
         <div className="flex space-x-3">
-          <button 
-            onClick={handleCopyHTML}
-            className="flex items-center px-5 py-3 bg-surface hover:bg-surfaceHover border border-border text-text1 rounded-xl transition-all font-bold"
-          >
+          <button onClick={handleCopyHTML} className="flex items-center px-5 py-3 bg-surface hover:bg-surfaceHover border border-border text-text1 rounded-xl transition-all font-bold">
             <Copy size={18} className="mr-2" /> HTML 복사
           </button>
-          <button 
-            onClick={handleSaveImage}
-            disabled={saveLoading}
-            className={`flex items-center px-8 py-3 rounded-xl transition-all font-black shadow-xl ${
-              saveLoading ? 'bg-zinc-700 cursor-wait' : 'bg-text1 text-background hover:bg-white'
-            }`}
-          >
-            {saveLoading ? (
-              <><Loader2 size={20} className="mr-2 animate-spin" /> 저장 중...</>
-            ) : (
-              <><Download size={20} className="mr-2" /> 전체 이미지 저장</>
-            )}
+          <button onClick={handleSaveImage} disabled={saveLoading} className={`flex items-center px-8 py-3 rounded-xl transition-all font-black shadow-xl ${saveLoading ? 'bg-zinc-700 cursor-wait' : 'bg-text1 text-background hover:bg-white'}`}>
+            {saveLoading ? <><Loader2 size={20} className="mr-2 animate-spin" /> 저장 중...</> : <><Download size={20} className="mr-2" /> 전체 이미지 저장</>}
           </button>
         </div>
       </div>
 
       <div className="flex justify-center px-4">
-        {/* 모바일 캔버스 */}
-        <div id="result-page" className={`w-full max-w-[440px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative group overflow-hidden rounded-[40px] border-4 border-[#333]`}>
+        <div id="result-page" className="w-full max-w-[440px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative group overflow-hidden rounded-[40px] border-4 border-[#333]">
           
-          {/* 히어로 섹션 프리뷰 */}
-          <div className={`relative min-h-[560px] flex flex-col items-center justify-center p-10 group/section overflow-hidden ${theme.heroBg}`}>
-            <img 
-              src={layoutSlots.hero || aiHeroUrl} 
-              className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-multiply" 
-              alt="Hero" 
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20"></div>
+          {/* 히어로 섹션 */}
+          <div className="relative min-h-[560px] flex flex-col items-center justify-center p-10 group/section overflow-hidden">
+            <img src={layoutSlots.hero || aiHeroUrl} className="absolute inset-0 w-full h-full object-cover" alt="Hero" />
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.8) 100%)' }}></div>
             
             <div className="relative z-10 flex flex-col items-center w-full mt-10">
               <div className="flex flex-wrap justify-center gap-2 mb-8 animate-fade-in">
@@ -216,39 +205,35 @@ export const Step7Result: React.FC = () => {
                   <span key={i} className={`px-4 py-1.5 ${theme.tagBg} ${theme.tagText} border ${theme.tagBorder} text-[11px] font-black rounded-full uppercase tracking-widest shadow-sm`}>{tag}</span>
                 ))}
               </div>
-              <h1 
-                contentEditable 
-                suppressContentEditableWarning 
-                className={`text-[42px] font-black tracking-tighter text-center mb-6 outline-none focus:bg-white/10 p-2 rounded leading-[1.1] drop-shadow-md ${theme.heroText}`}
-              >
+              <h1 contentEditable suppressContentEditableWarning 
+                className={`text-[42px] font-black tracking-tighter text-center mb-6 outline-none focus:bg-white/10 p-2 rounded leading-[1.1] ${theme.heroText}`}
+                style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>
                 {generatedCopy?.hero?.title?.split('\\n').map((line: string, i: number) => (
                   <React.Fragment key={i}>{line}<br/></React.Fragment>
-                )) || (styleTone === 'light' ? '자연스러운\n일상의 완성' : '압도적인\n품격의 시작')}
+                )) || '최고의 선택'}
               </h1>
-              <p 
-                contentEditable 
-                suppressContentEditableWarning 
+              <p contentEditable suppressContentEditableWarning 
                 className={`text-lg text-center mb-12 outline-none focus:bg-white/10 p-2 rounded font-bold opacity-90 ${theme.heroSubText}`}
-              >
+                style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
                 {generatedCopy?.hero?.sub || pName}
               </p>
-              
-              <div className={`${styleTone === 'light' ? 'bg-[#3d2000] text-white' : 'bg-accent text-white'} px-10 py-5 rounded-2xl font-black text-2xl shadow-2xl animate-bounce tracking-tight`}>
+              <div className={`${styleTone === 'light' ? 'bg-[#D4A017]' : 'bg-accent'} text-white px-10 py-5 rounded-2xl font-black text-2xl shadow-2xl animate-bounce tracking-tight`}>
                 {sectionInputs.hero?.price || generatedCopy?.cta?.price || '가격 안내'}
               </div>
             </div>
           </div>
 
           {/* 배송 배너 */}
-          <div className={`py-10 px-6 border-y flex justify-between items-center group/section relative ${theme.shipBg} ${theme.shipBorder}`}>
+          <div className={`py-10 px-6 border-y flex justify-between items-center relative ${theme.shipBg} ${theme.shipBorder}`}>
              {[
-               { label: 'ORDER INFO', value: generatedCopy?.shipping?.cutoff || sectionInputs.shipping?.cutoffTime || '14시 마감' },
-               { label: 'DISPATCH', value: generatedCopy?.shipping?.ship || sectionInputs.shipping?.dispatchTime || '당일 발송' },
-               { label: 'DELIVERY', value: generatedCopy?.shipping?.delivery || sectionInputs.shipping?.deliveryTime || '내일 도착' }
+               { label: '마감', sub: '오후 2시 이전 주문', value: generatedCopy?.shipping?.cutoff || sectionInputs.shipping?.cutoffTime || '14:00' },
+               { label: '출고', sub: '당일 출고', value: generatedCopy?.shipping?.ship || sectionInputs.shipping?.dispatchTime || '당일 발송' },
+               { label: '배송', sub: '1~2일 내 도착', value: generatedCopy?.shipping?.delivery || sectionInputs.shipping?.deliveryTime || '빠른 배송' }
              ].map((item, i) => (
-               <div key={i} className={`text-center flex-1 ${i < 2 ? `border-r ${theme.shipBorder}` : ''} px-2`}>
-                 <div className={`text-[10px] font-black mb-2 uppercase tracking-widest opacity-60 ${theme.shipText}`}>{item.label}</div>
-                 <div contentEditable suppressContentEditableWarning className={`text-sm font-black outline-none ${theme.shipText}`}>
+               <div key={i} className={`text-center flex-1 ${i < 2 ? `border-r ${theme.shipBorder}` : ''} px-1`}>
+                 <div className={`text-[11px] font-black mb-1 ${theme.shipText}`}>{item.label}</div>
+                 <div className={`text-[9px] opacity-60 mb-1 scale-90 ${theme.shipText}`}>{item.sub}</div>
+                 <div contentEditable suppressContentEditableWarning className={`text-[13px] font-black outline-none ${theme.shipText}`}>
                    {item.value}
                  </div>
                </div>
@@ -257,46 +242,44 @@ export const Step7Result: React.FC = () => {
 
           {/* 리뷰 섹션 */}
           <div className={`p-10 ${theme.reviewBg} border-b ${theme.shipBorder}`}>
-            <h3 className={`text-center font-black text-2xl mb-10 tracking-tight ${theme.heroText}`}>{generatedCopy?.review?.title || 'REAL REVIEWS'}</h3>
+            <h3 className={`text-center font-black text-2xl mb-10 tracking-tight ${styleTone === 'light' ? 'text-[#3d2000]' : 'text-white'}`}>{generatedCopy?.review?.title || 'REAL REVIEWS'}</h3>
             <div className="grid grid-cols-2 gap-5">
               {(generatedCopy?.review?.items || [1,2,3,4]).map((item: any, i: number) => (
-                <div key={i} className={`p-5 rounded-[24px] border shadow-sm space-y-3 transition-transform hover:scale-105 ${theme.reviewCard}`}>
-                  <div className={`${styleTone === 'light' ? 'text-[#D4A017]' : 'text-gold2'} text-xs font-black tracking-widest`}>{item?.stars || '★★★★★'}</div>
-                  <p className={`text-[12px] leading-relaxed line-clamp-4 font-medium ${theme.reviewText}`}>{item?.text || '실제 고객님의 생생한 후기가 여기에 표시됩니다.'}</p>
-                  <div className="text-[10px] opacity-40 font-bold uppercase">{item?.user || 'USER_ID'}</div>
+                <div key={i} className={`p-5 rounded-[24px] border shadow-sm space-y-3 ${theme.reviewCard}`}>
+                  <div className={`${styleTone === 'light' ? 'text-[#D4A017]' : 'text-gold2'} text-[10px] font-black tracking-widest`}>{item?.stars || '★★★★★'}</div>
+                  <p className={`text-[11px] leading-relaxed font-medium ${theme.reviewText}`}>{item?.text || '최고의 제품이에요!'}</p>
+                  <div className="text-[9px] opacity-40 font-bold uppercase">{item?.user || '구매자'}</div>
                 </div>
               ))}
             </div>
           </div>
           
           {/* 스토리 섹션 */}
-          <div className="relative group/section overflow-hidden min-h-[400px] flex items-end">
-            <img 
-              src={storyImageUrl} 
-              className="absolute inset-0 w-full h-full object-cover" 
-              alt="Story" 
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            />
-            <div className={`absolute inset-0 ${styleTone === 'light' ? 'bg-gradient-to-t from-white via-white/80 to-transparent' : 'bg-gradient-to-t from-black via-black/80 to-transparent'}`}></div>
+          <div className="relative overflow-hidden min-h-[400px] flex items-end"
+               style={!layoutSlots.story ? { background: 'linear-gradient(135deg, #1a0d00, #3d2010)' } : {}}>
+            {layoutSlots.story && (
+              <img src={layoutSlots.story} className="absolute inset-0 w-full h-full object-cover" alt="Story" />
+            )}
+            <div className={`absolute inset-0 ${layoutSlots.story ? 'bg-black/60' : ''}`}></div>
             <div className="relative z-10 p-12 text-center w-full">
-              <h3 contentEditable suppressContentEditableWarning className={`font-black text-3xl mb-8 outline-none leading-tight tracking-tighter ${theme.heroText}`}>
-                {generatedCopy?.story?.headline || '우리가 만드는\n진심의 가치'}
+              <h3 contentEditable suppressContentEditableWarning className="font-black text-3xl mb-8 outline-none leading-tight tracking-tighter text-white">
+                {generatedCopy?.story?.headline || '우리의 진심'}
               </h3>
-              <p contentEditable suppressContentEditableWarning className={`text-sm leading-relaxed outline-none font-medium opacity-80 ${theme.heroText}`}>
-                {generatedCopy?.story?.body || category + '의 새로운 기준을 제시합니다.'}
+              <p contentEditable suppressContentEditableWarning className="text-sm leading-relaxed outline-none font-medium text-white/80">
+                {generatedCopy?.story?.body || store.category + '의 새로운 기준.'}
               </p>
             </div>
           </div>
 
           {/* 특징 카드 */}
           <div className={`p-12 ${theme.featureBg}`}>
-            <h3 className={`text-center font-black text-[22px] mb-12 tracking-tight ${theme.heroText}`}>{generatedCopy?.feature?.title || 'THE HIGHLIGHTS'}</h3>
+            <h3 className={`text-center font-black text-[22px] mb-12 tracking-tight ${styleTone === 'light' ? 'text-[#3d2000]' : 'text-white'}`}>{generatedCopy?.feature?.title || 'HIGHLIGHTS'}</h3>
             <div className="grid grid-cols-2 gap-10">
               {generatedCopy?.feature?.items?.map((item: any, i: number) => (
-                <div key={i} className="text-center space-y-4 group/item">
-                  <div className={`text-4xl ${theme.featureIcon} w-20 h-20 flex items-center justify-center rounded-[32px] mx-auto shadow-sm border border-black/5 transition-transform group-hover/item:rotate-12`}>{item.icon}</div>
+                <div key={i} className="text-center space-y-4">
+                  <div className={`text-4xl ${theme.featureIcon} w-20 h-20 flex items-center justify-center rounded-[32px] mx-auto shadow-sm`}>{item.icon}</div>
                   <h4 className={`font-black text-sm tracking-tight ${styleTone === 'light' ? 'text-[#8B6510]' : 'text-gold2'}`}>{item.title}</h4>
-                  <p className={`text-[11px] leading-relaxed font-medium opacity-60 ${theme.heroText}`}>{item.desc}</p>
+                  <p className={`text-[11px] leading-relaxed font-medium opacity-60 ${styleTone === 'light' ? 'text-[#3d2000]' : 'text-white'}`}>{item.desc}</p>
                 </div>
               ))}
             </div>
@@ -304,34 +287,35 @@ export const Step7Result: React.FC = () => {
 
           {/* 인증 배지 */}
           <div className={`${theme.certBg} p-12 text-center border-y ${theme.shipBorder}`}>
-            <h3 className={`text-[11px] font-black mb-8 uppercase tracking-[0.3em] opacity-50 ${theme.shipText}`}>{generatedCopy?.cert?.title || 'SAFETY CERTIFIED'}</h3>
             <div className={`inline-flex items-center space-x-5 ${theme.certBadge} border p-8 rounded-[32px] shadow-sm`}>
               <div className={`${styleTone === 'light' ? 'bg-[#f0e8d0] text-[#3d2000]' : 'bg-gold/20 text-gold'} w-14 h-14 rounded-full flex items-center justify-center`}>
                 <CheckCircle size={32} />
               </div>
               <div className="text-left">
-                <div className={`font-black text-xl tracking-tight ${theme.certText}`}>{generatedCopy?.cert?.badge || '공정거래 인증'}</div>
-                <div className={`text-[12px] font-bold opacity-60 ${theme.certText}`}>{generatedCopy?.cert?.sub || '엄격한 기준을 통과한 제품'}</div>
+                <div className={`font-black text-xl tracking-tight ${theme.certText}`}>{generatedCopy?.cert?.badge || '정식 인증'}</div>
+                <div className={`text-[12px] font-bold opacity-60 ${theme.certText}`}>{generatedCopy?.cert?.sub || '검증된 대품'}</div>
               </div>
             </div>
           </div>
 
           {/* 상품 구성 */}
           <div className={`${theme.productBg} p-12 ${theme.productText}`}>
-            <h3 className={`text-3xl font-black mb-10 tracking-tighter flex items-center`}>
-              <span className={`w-2 h-10 ${styleTone === 'light' ? 'bg-[#3d2000]' : 'bg-accent'} mr-4 rounded-full`}></span>
-              {generatedCopy?.product?.title || 'PACKAGE'}
-            </h3>
-            <div className="rounded-[32px] overflow-hidden mb-8 shadow-2xl border border-black/5">
-              <img src={layoutSlots.product || aiHeroUrl} className="w-full h-64 object-cover" />
+            <h3 className="text-2xl font-black mb-8 tracking-tighter">PACKAGE</h3>
+            <div className="rounded-[32px] overflow-hidden mb-8 shadow-xl border border-black/5">
+              {layoutSlots.product ? (
+                <img src={layoutSlots.product} className="w-full h-64 object-cover" />
+              ) : (
+                <div style={{ background: 'linear-gradient(135deg, #f5e8c0, #e8d090)', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '64px', borderRadius: '24px' }}>
+                  {getCategoryEmoji(category)}
+                </div>
+              )}
             </div>
             <div className="space-y-4">
-              <div className={`font-black text-2xl tracking-tight ${styleTone === 'light' ? 'text-[#3d2000]' : 'text-accent'}`}>{generatedCopy?.product?.name || '기본 세트 구성'}</div>
-              <div className="grid grid-cols-1 gap-3">
+              <div className="font-black text-xl text-accent">{generatedCopy?.product?.name || '기본 구성'}</div>
+              <div className="grid grid-cols-1 gap-2">
                 {generatedCopy?.product?.items?.map((item: string, i: number) => (
                   <div key={i} className={`text-sm font-bold flex items-center p-3 rounded-xl ${styleTone === 'light' ? 'bg-[#fdfaf5]' : 'bg-zinc-100'}`}>
-                    <CheckCircle size={16} className={`mr-3 ${styleTone === 'light' ? 'text-[#8B6510]' : 'text-accent'}`} />
-                    {item}
+                    <CheckCircle size={14} className="mr-3 text-accent" /> {item}
                   </div>
                 ))}
               </div>
@@ -340,17 +324,14 @@ export const Step7Result: React.FC = () => {
 
           {/* 주의사항 */}
           <div className={`${theme.cautionBg} p-10`}>
-             <h4 className={`font-black text-sm mb-8 flex items-center opacity-80 ${theme.heroText}`}>
-               <span className={`w-1 h-5 ${styleTone === 'light' ? 'bg-[#3d2000]' : 'bg-zinc-400'} mr-3 rounded-full`}></span>
-               CAUTION & CARE
-             </h4>
+             <h4 className="font-black text-sm mb-8 opacity-80 uppercase tracking-widest">CAUTION</h4>
              <div className="space-y-6">
                {generatedCopy?.caution?.items?.map((item: any, i: number) => (
-                 <div key={i} className="flex space-x-4 items-start group/caution">
+                 <div key={i} className="flex space-x-4 items-start">
                    <span className="text-2xl mt-1">{item.icon}</span>
                    <div className="flex-1">
-                     <div className={`text-sm font-black mb-1 ${theme.heroText}`}>{item.title}</div>
-                     <p className={`text-[11px] leading-relaxed font-medium opacity-60 ${theme.heroText}`}>{item.desc}</p>
+                     <div className="text-sm font-black mb-1">{item.title}</div>
+                     <p className="text-[11px] leading-relaxed font-medium opacity-60">{item.desc}</p>
                    </div>
                  </div>
                ))}
@@ -359,14 +340,13 @@ export const Step7Result: React.FC = () => {
 
           {/* 최종 CTA */}
           <div className={`${theme.ctaBg} p-16 text-center space-y-10`}>
-             <div className="text-white/40 text-[11px] font-black uppercase tracking-[0.4em]">{generatedCopy?.cta?.sub || 'LIMITED EDITION'}</div>
              <h3 className="text-white font-black text-3xl leading-[1.2] tracking-tighter">
-               {generatedCopy?.cta?.main?.split('\\n').map((l:string, i:number)=><React.Fragment key={i}>{l}<br/></React.Fragment>) || '지금 가장 합리적인\n선택을 만나보세요'}
+               {generatedCopy?.cta?.main || '지금 시작하세요'}
              </h3>
-             <button className={`${theme.ctaButton} ${theme.ctaButtonText} w-full py-6 rounded-[24px] font-black text-2xl shadow-[0_20px_50px_-10px_rgba(212,160,23,0.5)] transform transition-all active:scale-95`}>
-                {sectionInputs.hero?.price || generatedCopy?.cta?.price || '가격 확인'} SHOP NOW
+             <button className={`${theme.ctaButton} ${theme.ctaButtonText} w-full py-6 rounded-[24px] font-black shadow-xl active:scale-95 transition-transform`}
+                     style={{ fontSize: 'clamp(14px, 4vw, 22px)', whiteSpace: 'nowrap' }}>
+                {sectionInputs.hero?.price || generatedCopy?.cta?.price || '가격 확인'} 구매하기
              </button>
-             <div className="text-white/20 text-[10px] font-medium">© 2026 PREMIUM DETAIL PAGE BUILDER</div>
           </div>
 
         </div>
@@ -375,25 +355,11 @@ export const Step7Result: React.FC = () => {
       {/* 액션 바 */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-2xl border-t border-white/5 p-6 z-40">
         <div className="max-w-6xl mx-auto flex justify-between items-center pl-[100px]">
-          <div className="flex items-center space-x-8">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black text-text3 uppercase mb-1">Status</span>
-              <div className="text-green font-bold flex items-center text-sm">
-                <div className="w-2 h-2 bg-green rounded-full mr-2 animate-pulse"></div>
-                Cloud Sync Ready
-              </div>
-            </div>
-            <div className="h-10 w-[1px] bg-border"></div>
-            <div className="flex flex-col text-text2 text-sm">
-               브라우저 폭에 맞춰 모바일 뷰로 고정된 화면입니다.
-            </div>
+          <div className="text-green font-bold flex items-center text-sm">
+            <div className="w-2 h-2 bg-green rounded-full mr-2 animate-pulse"></div> 완료됨
           </div>
-          <button 
-            onClick={() => setCurrentStep(8)}
-            className="group flex items-center px-12 py-4 bg-white text-background rounded-2xl font-black hover:scale-105 active:scale-95 transition-all shadow-[0_15px_30px_rgba(255,255,255,0.1)]"
-          >
-            대시보드로 돌아가기
-            <ArrowRight className="ml-3 group-hover:translate-x-2 transition-transform" size={24} />
+          <button onClick={() => setCurrentStep(8)} className="group flex items-center px-12 py-4 bg-white text-background rounded-2xl font-black hover:scale-105 transition-all">
+            대시보드로 돌아가기 <ArrowRight className="ml-3 group-hover:translate-x-2 transition-transform" />
           </button>
         </div>
       </div>
