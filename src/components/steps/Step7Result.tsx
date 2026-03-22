@@ -102,16 +102,12 @@ export const Step7Result: React.FC = () => {
 
   const pName = sectionInputs.hero?.name || '추천 상품';
   
-  // URL 생성 함수 (Unsplash fallback 포함)
-  const getImageUrl = (prompt: string, fallbackKeywords: string) => {
-    const pollinationUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${Math.random()}`;
-    // 워터마크 이슈 대응을 위해 기본을 Unsplash로 설정하거나 번갈아 사용 가능. 
-    // 여기서는 요청대로 Pollinations에 nologo를 붙이되 문제가 생기면 Unsplash 사용 유도.
-    return pollinationUrl; 
+  // URL 생성 함수
+  const getImageUrl = (prompt: string) => {
+    return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${Math.random()}`;
   };
 
-  const aiHeroUrl = getImageUrl(generateImagePrompt(category, pName, styleTone), `${category} ${pName}`);
-  const aiStoryUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(`${category} ${pName} lifestyle background, natural outdoor setting, warm tones, professional photography, no text, no watermark, cinematic, soft bokeh`)}?width=1200&height=600&nologo=true&seed=${Math.random()}`;
+  const aiHeroUrl = getImageUrl(generateImagePrompt(category, pName, styleTone));
 
   // HTML 복사 로직
   const handleCopyHTML = async () => {
@@ -143,12 +139,10 @@ export const Step7Result: React.FC = () => {
     try {
       setSaveLoading(true);
 
-      // 외부 이미지 전부 base64로 변환 (CORS 우회)
       const images = element.querySelectorAll('img');
       const imagePromises = Array.from(images).map(async (img) => {
         if (img.src.startsWith('http') && !img.src.startsWith(window.location.origin)) {
           try {
-            // CORS 프록시 서비스 이용
             const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(img.src)}`;
             const response = await fetch(proxyUrl);
             const blob = await response.blob();
@@ -159,8 +153,7 @@ export const Step7Result: React.FC = () => {
             });
             img.src = base64;
           } catch (e) {
-            console.warn('이미지 변환 실패, 원본 유지:', img.src);
-            // 캡처 시 에러 방지를 위해 allowTaint: true와 useCORS: true를 병행
+            console.warn('이미지 변환 실패:', img.src);
           }
         }
       });
@@ -175,7 +168,7 @@ export const Step7Result: React.FC = () => {
         windowWidth: element.scrollWidth,
         windowHeight: element.scrollHeight,
         logging: false,
-        imageTimeout: 30000, // 충분한 시간 확보
+        imageTimeout: 30000,
         onclone: (clonedDoc) => {
           const el = clonedDoc.getElementById('result-page');
           if (el) {
@@ -188,7 +181,6 @@ export const Step7Result: React.FC = () => {
         }
       });
 
-      // PNG 다운로드
       const link = document.createElement('a');
       link.download = `상세페이지_${new Date().toISOString().slice(0,10)}.png`;
       link.href = canvas.toDataURL('image/png', 1.0);
@@ -274,7 +266,7 @@ export const Step7Result: React.FC = () => {
 
           {/* 리뷰 섹션 */}
           <div className={`p-10 ${theme.reviewBg} border-b ${theme.shipBorder}`}>
-            <h3 className={`text-center font-black text-2xl mb-10 tracking-tight ${styleTone === 'light' ? 'text-[#3d2000]' : 'text-white'}`}>{generatedCopy?.review?.title || 'REAL REVIEWS'}</h3>
+            <h3 className={`text-center font-black text-2xl mb-10 tracking-tight ${styleTone === 'light' ? 'text-[#3d2000]' : 'text-white'}`}>{generatedCopy?.review?.title || '생생한 실구매자 후기'}</h3>
             <div className="grid grid-cols-2 gap-5">
               {(generatedCopy?.review?.items || [1,2,3,4]).map((item: any, i: number) => (
                 <div key={i} className={`p-5 rounded-[24px] border shadow-sm space-y-3 ${theme.reviewCard}`}>
@@ -305,7 +297,7 @@ export const Step7Result: React.FC = () => {
 
           {/* 특징 카드 */}
           <div className={`p-12 ${theme.featureBg}`}>
-            <h3 className={`text-center font-black text-[22px] mb-12 tracking-tight ${styleTone === 'light' ? 'text-[#3d2000]' : 'text-white'}`}>{generatedCopy?.feature?.title || 'HIGHLIGHTS'}</h3>
+            <h3 className={`text-center font-black text-[22px] mb-12 tracking-tight ${styleTone === 'light' ? 'text-[#3d2000]' : 'text-white'}`}>특별한 이유</h3>
             <div className="grid grid-cols-2 gap-10">
               {generatedCopy?.feature?.items?.map((item: any, i: number) => (
                 <div key={i} className="text-center space-y-4">
@@ -319,6 +311,7 @@ export const Step7Result: React.FC = () => {
 
           {/* 인증 배지 */}
           <div className={`${theme.certBg} p-12 text-center border-y ${theme.shipBorder}`}>
+            <h1 className="text-[14px] font-black mb-6 opacity-60">인증 내역</h1>
             <div className={`inline-flex items-center space-x-5 ${theme.certBadge} border p-8 rounded-[32px] shadow-sm`}>
               <div className={`${styleTone === 'light' ? 'bg-[#f0e8d0] text-[#3d2000]' : 'bg-gold/20 text-gold'} w-14 h-14 rounded-full flex items-center justify-center`}>
                 <CheckCircle size={32} />
@@ -332,7 +325,7 @@ export const Step7Result: React.FC = () => {
 
           {/* 상품 구성 */}
           <div className={`${theme.productBg} p-12 ${theme.productText}`}>
-            <h3 className="text-2xl font-black mb-8 tracking-tighter">PACKAGE</h3>
+            <h3 className="text-2xl font-black mb-8 tracking-tighter">상품 구성 안내</h3>
             <div className="rounded-[32px] overflow-hidden mb-8 shadow-xl border border-black/5">
               {layoutSlots.product ? (
                 <img src={layoutSlots.product} className="w-full h-64 object-cover" />
@@ -356,14 +349,14 @@ export const Step7Result: React.FC = () => {
 
           {/* 주의사항 */}
           <div className={`${theme.cautionBg} p-10`}>
-             <h4 className="font-black text-sm mb-8 opacity-80 uppercase tracking-widest">CAUTION</h4>
+             <h4 className="font-black text-sm mb-8 opacity-80 uppercase tracking-widest">보관 및 주의사항</h4>
              <div className="space-y-6">
                {generatedCopy?.caution?.items?.map((item: any, i: number) => (
-                 <div key={i} className="flex space-x-4 items-start">
-                   <span className="text-2xl mt-1">{item.icon}</span>
-                   <div className="flex-1">
-                     <div className="text-sm font-black mb-1">{item.title}</div>
-                     <p className="text-[11px] leading-relaxed font-medium opacity-60">{item.desc}</p>
+                 <div key={i} style={{display:'flex',gap:'10px',marginBottom:'12px',alignItems:'flex-start'}}>
+                   <span style={{fontSize:'20px',flexShrink:0}}>{item.icon}</span>
+                   <div>
+                     <div style={{fontWeight:700,fontSize:'13px',color: styleTone === 'light' ? '#1a0800' : '#fff',marginBottom:'2px'}}>{item.title}</div>
+                     <div style={{fontSize:'11px',color:'#888',lineHeight:1.5}}>{item.desc}</div>
                    </div>
                  </div>
                ))}
