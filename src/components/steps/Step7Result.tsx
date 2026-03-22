@@ -4,20 +4,28 @@ import { ArrowRight, Download, Copy, CheckCircle, Loader2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 export const Step7Result: React.FC = () => {
-  const { setCurrentStep, styleTone, sectionInputs, layoutSlots, generatedCopy, category } = useAppStore();
+  const { setCurrentStep, styleTone, sectionInputs, layoutSlots, generatedCopy, category, analyzedPalette } = useAppStore();
   const [saveLoading, setSaveLoading] = useState(false);
+
+  // 4단계 입력 가격 (수정 2 반영)
+  const userPrice = sectionInputs.hero?.price;
+  const displayPrice = generatedCopy?.cta?.price || userPrice || '가격 문의';
+
+  // 벤치마킹 팔레트 적용 (수정 3 반영)
+  const benchmarkingHeroBg = analyzedPalette?.[0];
+  const benchmarkingAccent = analyzedPalette?.[2];
 
   // 테마 색상 정의
   const themeData = {
     light: {
       pageBg: 'bg-[#fdfaf5]',
-      heroBg: 'bg-gradient-to-b from-[#f5f0e8] to-[#fff8f0]',
-      heroText: 'text-white', // 텍스트 가독성을 위해 화이트로 고정 (오버레이 적용됨)
+      heroBg: benchmarkingHeroBg ? '' : 'bg-gradient-to-b from-[#f5f0e8] to-[#fff8f0]',
+      heroText: 'text-white', // 오버레이 때문에 화이트 고정
       heroSubText: 'text-white/90',
       tagBg: 'bg-accent/20',
       tagText: 'text-white',
       tagBorder: 'border-accent/30',
-      shipBg: 'bg-[#f0e8d0]',
+      shipBg: benchmarkingAccent ? '' : 'bg-[#f0e8d0]',
       shipText: 'text-[#3d2000]',
       shipBorder: 'border-[#3d2000]/10',
       reviewBg: 'bg-[#faf7f0]',
@@ -25,26 +33,26 @@ export const Step7Result: React.FC = () => {
       reviewText: 'text-[#3d2000]',
       featureBg: 'bg-[#fdfaf5]',
       featureCard: 'bg-white border-[#ede5d0]',
-      featureIcon: 'bg-[#f0e8d0]',
-      certBg: 'bg-[#f0e8d0]',
+      featureIcon: benchmarkingAccent ? '' : 'bg-[#f0e8d0]',
+      certBg: benchmarkingAccent ? '' : 'bg-[#f0e8d0]',
       certBadge: 'bg-white border-[#ede5d0]',
       certText: 'text-[#3d2000]',
       productBg: 'bg-white',
       productText: 'text-[#3d2000]',
       cautionBg: 'bg-[#faf7f0]',
-      ctaBg: 'bg-[#3d2000]',
-      ctaButton: 'bg-[#D4A017]',
+      ctaBg: benchmarkingHeroBg ? '' : 'bg-[#3d2000]',
+      ctaButton: benchmarkingAccent ? '' : 'bg-[#D4A017]',
       ctaButtonText: 'text-[#1a0800]'
     },
     dark: {
       pageBg: 'bg-[#0a0a0a]',
-      heroBg: 'bg-[#1a1a1a]',
+      heroBg: benchmarkingHeroBg ? '' : 'bg-[#1a1a1a]',
       heroText: 'text-white',
       heroSubText: 'text-white/80',
       tagBg: 'bg-accent/20',
       tagText: 'text-white',
       tagBorder: 'border-accent/30',
-      shipBg: 'bg-[#111]',
+      shipBg: benchmarkingAccent ? '' : 'bg-[#111]',
       shipText: 'text-white',
       shipBorder: 'border-white/10',
       reviewBg: 'bg-zinc-900',
@@ -52,15 +60,15 @@ export const Step7Result: React.FC = () => {
       reviewText: 'text-white/80',
       featureBg: 'bg-black',
       featureCard: 'bg-zinc-900 border-white/5',
-      featureIcon: 'bg-zinc-800',
-      certBg: 'bg-zinc-900',
+      featureIcon: benchmarkingAccent ? '' : 'bg-zinc-800',
+      certBg: benchmarkingAccent ? '' : 'bg-zinc-900',
       certBadge: 'bg-black border-zinc-700',
       certText: 'text-gold2',
       productBg: 'bg-white',
       productText: 'text-gray-900',
       cautionBg: 'bg-zinc-50',
-      ctaBg: 'bg-[#1a1a1a]',
-      ctaButton: 'bg-accent',
+      ctaBg: benchmarkingHeroBg ? '' : 'bg-[#1a1a1a]',
+      ctaButton: benchmarkingAccent ? '' : 'bg-accent',
       ctaButtonText: 'text-white'
     }
   };
@@ -101,13 +109,7 @@ export const Step7Result: React.FC = () => {
   };
 
   const pName = sectionInputs.hero?.name || '추천 상품';
-  
-  // URL 생성 함수
-  const getImageUrl = (prompt: string) => {
-    return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${Math.random()}`;
-  };
-
-  const aiHeroUrl = getImageUrl(generateImagePrompt(category, pName, styleTone));
+  const aiHeroUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(generateImagePrompt(category, pName, styleTone))}?width=1024&height=1024&nologo=true&seed=${Math.random()}`;
 
   // HTML 복사 로직
   const handleCopyHTML = async () => {
@@ -116,7 +118,7 @@ export const Step7Result: React.FC = () => {
     const html = element.outerHTML;
     try {
       await navigator.clipboard.writeText(html);
-      alert('HTML이 클립보드에 복사되었습니다!\n스마트스토어 에디터에 붙여넣기 하세요.');
+      alert('HTML이 클립보드에 복사되었습니다!');
     } catch (err) {
       const textarea = document.createElement('textarea');
       textarea.value = html;
@@ -128,19 +130,14 @@ export const Step7Result: React.FC = () => {
     }
   };
 
-  // 이미지 저장 로직 (CORS 문제 해결 버전)
+  // 이미지 저장 로직
   const handleSaveImage = async () => {
     const element = document.getElementById('result-page');
-    if (!element) {
-      alert('저장할 페이지를 찾을 수 없습니다.');
-      return;
-    }
-
+    if (!element) return;
     try {
       setSaveLoading(true);
-
       const images = element.querySelectorAll('img');
-      const imagePromises = Array.from(images).map(async (img) => {
+      for (const img of Array.from(images)) {
         if (img.src.startsWith('http') && !img.src.startsWith(window.location.origin)) {
           try {
             const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(img.src)}`;
@@ -152,12 +149,9 @@ export const Step7Result: React.FC = () => {
               reader.readAsDataURL(blob);
             });
             img.src = base64;
-          } catch (e) {
-            console.warn('이미지 변환 실패:', img.src);
-          }
+          } catch (e) {}
         }
-      });
-      await Promise.all(imagePromises);
+      }
 
       const canvas = await html2canvas(element, {
         scale: 2,
@@ -167,26 +161,21 @@ export const Step7Result: React.FC = () => {
         scrollY: 0,
         windowWidth: element.scrollWidth,
         windowHeight: element.scrollHeight,
-        logging: false,
-        imageTimeout: 30000,
         onclone: (clonedDoc) => {
           const el = clonedDoc.getElementById('result-page');
           if (el) {
             el.style.transform = 'none';
             el.style.maxHeight = 'none';
             el.style.overflow = 'visible';
-            el.style.position = 'relative';
-            el.style.borderRadius = '0';
           }
         }
       });
-
       const link = document.createElement('a');
       link.download = `상세페이지_${new Date().toISOString().slice(0,10)}.png`;
       link.href = canvas.toDataURL('image/png', 1.0);
       link.click();
     } catch (error) {
-      alert('이미지 저장 중 오류가 발생했습니다.');
+      alert('저장 중 오류 발생');
     } finally {
       setSaveLoading(false);
     }
@@ -219,7 +208,8 @@ export const Step7Result: React.FC = () => {
         <div id="result-page" className="w-full max-w-[440px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative group overflow-hidden rounded-[40px] border-4 border-[#333]">
           
           {/* 히어로 섹션 */}
-          <div className="relative min-h-[560px] flex flex-col items-center justify-center p-10 group/section overflow-hidden">
+          <div className={`relative min-h-[560px] flex flex-col items-center justify-center p-10 overflow-hidden ${theme.heroBg}`}
+               style={benchmarkingHeroBg ? { backgroundColor: benchmarkingHeroBg } : {}}>
             <img src={layoutSlots.hero || aiHeroUrl} className="absolute inset-0 w-full h-full object-cover" alt="Hero" />
             <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.8) 100%)' }}></div>
             
@@ -241,21 +231,24 @@ export const Step7Result: React.FC = () => {
                 style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
                 {generatedCopy?.hero?.sub || pName}
               </p>
-              <div className={`${styleTone === 'light' ? 'bg-[#D4A017]' : 'bg-accent'} text-white px-10 py-5 rounded-2xl font-black text-2xl shadow-2xl animate-bounce tracking-tight`}>
-                {sectionInputs.hero?.price || generatedCopy?.cta?.price || '가격 안내'}
+              <div className={`text-white px-10 py-5 rounded-2xl font-black text-2xl shadow-2xl animate-bounce tracking-tight ${theme.ctaButton}`}
+                   style={benchmarkingAccent ? { backgroundColor: benchmarkingAccent } : {}}>
+                {displayPrice}
               </div>
             </div>
           </div>
 
           {/* 배송 배너 */}
-          <div className={`py-10 px-6 border-y flex justify-between items-center relative ${theme.shipBg} ${theme.shipBorder}`}>
+          <div className={`py-10 px-6 border-y flex justify-between items-center relative ${theme.shipBg} ${theme.shipBorder}`}
+               style={benchmarkingAccent ? { backgroundColor: benchmarkingAccent + '22', borderColor: benchmarkingAccent + '44' } : {}}>
              {[
                { label: '마감', sub: '오후 2시 이전 주문', value: generatedCopy?.shipping?.cutoff || sectionInputs.shipping?.cutoffTime || '14:00' },
                { label: '출고', sub: '당일 출고', value: generatedCopy?.shipping?.ship || sectionInputs.shipping?.dispatchTime || '당일 발송' },
                { label: '배송', sub: '1~2일 내 도착', value: generatedCopy?.shipping?.delivery || sectionInputs.shipping?.deliveryTime || '빠른 배송' }
              ].map((item, i) => (
-               <div key={i} className={`text-center flex-1 ${i < 2 ? `border-r ${theme.shipBorder}` : ''} px-1`}>
-                 <div className={`text-[11px] font-black mb-1 ${theme.shipText}`}>{item.label}</div>
+               <div key={i} className={`text-center flex-1 ${i < 2 ? `border-r ${theme.shipBorder}` : ''} px-1`}
+                    style={i < 2 ? { borderRightColor: benchmarkingAccent ? benchmarkingAccent + '33' : undefined } : {}}>
+                 <div className={`text-[11px] font-black mb-1 ${theme.shipText}`} style={benchmarkingAccent ? { color: benchmarkingAccent } : {}}>{item.label}</div>
                  <div className={`text-[9px] opacity-60 mb-1 scale-90 ${theme.shipText}`}>{item.sub}</div>
                  <div contentEditable suppressContentEditableWarning className={`text-[13px] font-black outline-none ${theme.shipText}`}>
                    {item.value}
@@ -270,7 +263,8 @@ export const Step7Result: React.FC = () => {
             <div className="grid grid-cols-2 gap-5">
               {(generatedCopy?.review?.items || [1,2,3,4]).map((item: any, i: number) => (
                 <div key={i} className={`p-5 rounded-[24px] border shadow-sm space-y-3 ${theme.reviewCard}`}>
-                  <div className={`${styleTone === 'light' ? 'text-[#D4A017]' : 'text-gold2'} text-[10px] font-black tracking-widest`}>{item?.stars || '★★★★★'}</div>
+                  <div className={`text-[10px] font-black tracking-widest ${styleTone === 'light' ? 'text-accent' : 'text-gold2'}`}
+                       style={benchmarkingAccent ? { color: benchmarkingAccent } : {}}>{item?.stars || '★★★★★'}</div>
                   <p className={`text-[11px] leading-relaxed font-medium ${theme.reviewText}`}>{item?.text || '최고의 제품이에요!'}</p>
                   <div className="text-[9px] opacity-40 font-bold uppercase">{item?.user || '구매자'}</div>
                 </div>
@@ -280,11 +274,11 @@ export const Step7Result: React.FC = () => {
           
           {/* 스토리 섹션 */}
           <div className="relative overflow-hidden min-h-[400px] flex items-end"
-               style={!layoutSlots.story ? { background: 'linear-gradient(135deg, #1a0d00, #3d2010)' } : {}}>
+               style={!layoutSlots.story ? { background: benchmarkingHeroBg || 'linear-gradient(135deg, #1a0d00, #3d2010)' } : {}}>
             {layoutSlots.story && (
               <img src={layoutSlots.story} className="absolute inset-0 w-full h-full object-cover" alt="Story" />
             )}
-            <div className={`absolute inset-0 ${layoutSlots.story ? 'bg-black/60' : ''}`}></div>
+            <div className="absolute inset-0 bg-black/60"></div>
             <div className="relative z-10 p-12 text-center w-full">
               <h3 contentEditable suppressContentEditableWarning className="font-black text-3xl mb-8 outline-none leading-tight tracking-tighter text-white">
                 {generatedCopy?.story?.headline || '우리의 진심'}
@@ -297,12 +291,14 @@ export const Step7Result: React.FC = () => {
 
           {/* 특징 카드 */}
           <div className={`p-12 ${theme.featureBg}`}>
-            <h3 className={`text-center font-black text-[22px] mb-12 tracking-tight ${styleTone === 'light' ? 'text-[#3d2000]' : 'text-white'}`}>특별한 이유</h3>
+            <h3 className={`text-center font-black text-[22px] mb-12 tracking-tight ${styleTone === 'light' ? 'text-[#3d2000]' : 'text-white'}`}>{generatedCopy?.feature?.title || '특별한 이유'}</h3>
             <div className="grid grid-cols-2 gap-10">
               {generatedCopy?.feature?.items?.map((item: any, i: number) => (
                 <div key={i} className="text-center space-y-4">
-                  <div className={`text-4xl ${theme.featureIcon} w-20 h-20 flex items-center justify-center rounded-[32px] mx-auto shadow-sm`}>{item.icon}</div>
-                  <h4 className={`font-black text-sm tracking-tight ${styleTone === 'light' ? 'text-[#8B6510]' : 'text-gold2'}`}>{item.title}</h4>
+                  <div className={`text-4xl ${theme.featureIcon} w-20 h-20 flex items-center justify-center rounded-[32px] mx-auto shadow-sm`}
+                       style={benchmarkingAccent ? { backgroundColor: benchmarkingAccent + '11', color: benchmarkingAccent } : {}}>{item.icon}</div>
+                  <h4 className={`font-black text-sm tracking-tight`}
+                      style={{ color: benchmarkingAccent || (styleTone === 'light' ? '#8B6510' : '#D4A017') }}>{item.title}</h4>
                   <p className={`text-[11px] leading-relaxed font-medium opacity-60 ${styleTone === 'light' ? 'text-[#3d2000]' : 'text-white'}`}>{item.desc}</p>
                 </div>
               ))}
@@ -310,15 +306,18 @@ export const Step7Result: React.FC = () => {
           </div>
 
           {/* 인증 배지 */}
-          <div className={`${theme.certBg} p-12 text-center border-y ${theme.shipBorder}`}>
+          <div className={`${theme.certBg} p-12 text-center border-y ${theme.shipBorder}`}
+               style={benchmarkingAccent ? { backgroundColor: benchmarkingAccent + '08' } : {}}>
             <h1 className="text-[14px] font-black mb-6 opacity-60">인증 내역</h1>
             <div className={`inline-flex items-center space-x-5 ${theme.certBadge} border p-8 rounded-[32px] shadow-sm`}>
-              <div className={`${styleTone === 'light' ? 'bg-[#f0e8d0] text-[#3d2000]' : 'bg-gold/20 text-gold'} w-14 h-14 rounded-full flex items-center justify-center`}>
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center`}
+                   style={{ backgroundColor: (benchmarkingAccent || '#D4A017') + '22', color: benchmarkingAccent || '#D4A017' }}>
                 <CheckCircle size={32} />
               </div>
               <div className="text-left">
-                <div className={`font-black text-xl tracking-tight ${theme.certText}`}>{generatedCopy?.cert?.badge || '정식 인증'}</div>
-                <div className={`text-[12px] font-bold opacity-60 ${theme.certText}`}>{generatedCopy?.cert?.sub || '검증된 대품'}</div>
+                <div className={`font-black text-xl tracking-tight ${theme.certText}`}
+                     style={benchmarkingAccent ? { color: benchmarkingAccent } : {}}>{generatedCopy?.cert?.badge || '정식 인증'}</div>
+                <div className={`text-[12px] font-bold opacity-60 ${theme.certText}`}>{generatedCopy?.cert?.sub || '검증된 제품'}</div>
               </div>
             </div>
           </div>
@@ -330,17 +329,17 @@ export const Step7Result: React.FC = () => {
               {layoutSlots.product ? (
                 <img src={layoutSlots.product} className="w-full h-64 object-cover" />
               ) : (
-                <div style={{ background: 'linear-gradient(135deg, #f5e8c0, #e8d090)', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '64px', borderRadius: '24px' }}>
+                <div style={{ background: benchmarkingHeroBg || 'linear-gradient(135deg, #f5e8c0, #e8d090)', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '64px', borderRadius: '24px' }}>
                   {getCategoryEmoji(category)}
                 </div>
               )}
             </div>
             <div className="space-y-4">
-              <div className="font-black text-xl text-accent">{generatedCopy?.product?.name || '기본 구성'}</div>
+              <div className="font-black text-xl" style={{ color: benchmarkingAccent || '#D4A017' }}>{generatedCopy?.product?.name || '기본 구성'}</div>
               <div className="grid grid-cols-1 gap-2">
                 {generatedCopy?.product?.items?.map((item: string, i: number) => (
                   <div key={i} className={`text-sm font-bold flex items-center p-3 rounded-xl ${styleTone === 'light' ? 'bg-[#fdfaf5]' : 'bg-zinc-100'}`}>
-                    <CheckCircle size={14} className="mr-3 text-accent" /> {item}
+                    <CheckCircle size={14} className="mr-3" style={{ color: benchmarkingAccent || '#D4A017' }} /> {item}
                   </div>
                 ))}
               </div>
@@ -364,13 +363,14 @@ export const Step7Result: React.FC = () => {
           </div>
 
           {/* 최종 CTA */}
-          <div className={`${theme.ctaBg} p-16 text-center space-y-10`}>
+          <div className={`${theme.ctaBg} p-16 text-center space-y-10`}
+               style={benchmarkingHeroBg ? { backgroundColor: benchmarkingHeroBg } : {}}>
              <h3 className="text-white font-black text-3xl leading-[1.2] tracking-tighter">
                {generatedCopy?.cta?.main || '지금 시작하세요'}
              </h3>
              <button className={`${theme.ctaButton} ${theme.ctaButtonText} w-full py-6 rounded-[24px] font-black shadow-xl active:scale-95 transition-transform`}
-                     style={{ fontSize: 'clamp(14px, 4vw, 22px)', whiteSpace: 'nowrap' }}>
-                {sectionInputs.hero?.price || generatedCopy?.cta?.price || '가격 확인'} 구매하기
+                     style={{ fontSize: 'clamp(14px, 4vw, 22px)', whiteSpace: 'nowrap', backgroundColor: benchmarkingAccent || undefined }}>
+                {displayPrice} 구매하기
              </button>
           </div>
 
@@ -380,11 +380,9 @@ export const Step7Result: React.FC = () => {
       {/* 액션 바 */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-2xl border-t border-white/5 p-6 z-40">
         <div className="max-w-6xl mx-auto flex justify-between items-center pl-[100px]">
-          <div className="text-green font-bold flex items-center text-sm">
-            <div className="w-2 h-2 bg-green rounded-full mr-2 animate-pulse"></div> 완료됨
-          </div>
-          <button onClick={() => setCurrentStep(8)} className="group flex items-center px-12 py-4 bg-white text-background rounded-2xl font-black hover:scale-105 transition-all">
-            대시보드로 돌아가기 <ArrowRight className="ml-3 group-hover:translate-x-2 transition-transform" />
+          <button onClick={() => setCurrentStep(8)} className="group flex items-center px-12 py-4 bg-white text-background rounded-2xl font-black hover:scale-105 transition-all outline-none">
+            완성된 상세페이지 확인 완료
+            <ArrowRight className="ml-3 group-hover:translate-x-2 transition-transform" />
           </button>
         </div>
       </div>

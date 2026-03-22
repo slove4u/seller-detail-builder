@@ -4,7 +4,7 @@ import { ArrowRight, Link as LinkIcon, Search, Loader2, Check } from 'lucide-rea
 import { analyzeLinkStyle } from '../../api/claudeApi';
 
 export const Step0LinkAnalysis: React.FC = () => {
-  const { setCurrentStep, setStyle } = useAppStore();
+  const { setCurrentStep, setStyle, setAnalysisResults } = useAppStore();
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -22,12 +22,17 @@ export const Step0LinkAnalysis: React.FC = () => {
       const data = await analyzeLinkStyle(url);
       setResult(data);
       if (data && data.tone) {
-        // 'Dark', 'DARK', 'dark' 등 다양한 대소문자 응답을 'dark' | 'light' | 'modern'에 맞게 보정
         const normalizedTone = data.tone.toLowerCase() as any;
         if (['dark', 'light', 'modern'].includes(normalizedTone)) {
           setStyle(normalizedTone);
         }
       }
+      // 분석 결과 저장 (수정 3 반영)
+      setAnalysisResults({
+        palette: data.palette,
+        tone: data.tone,
+        sections: data.sections
+      });
     } catch (e: any) {
       console.error(e);
       showToast(`분석 중 에러가 발생했습니다: ${e.message}`);

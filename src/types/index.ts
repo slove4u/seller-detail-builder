@@ -41,6 +41,11 @@ export interface AppState {
   styleTone: StyleTheme;
   stylePalette: string[];
 
+  // Link Analysis Results
+  analyzedPalette?: string[];
+  analyzedTone?: string;
+  analyzedSections?: any;
+
   productImages: string[]; // Base64 or Object URLs
   sourceDocs: {
     feature: string[];
@@ -65,4 +70,5 @@ export interface AppState {
   
   generatedCopy: any;
   setGeneratedCopy: (data: any) => void;
+  setAnalysisResults: (data: { palette?: string[], tone?: string, sections?: any }) => void;
 }

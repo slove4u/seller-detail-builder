@@ -7,6 +7,11 @@ export const useAppStore = create<AppState>((set) => ({
   styleTone: 'dark',
   stylePalette: ['#1a0800','#3d1500','#D4A017','#F5C842','#4caf7d','#faf7f0'],
   
+  // Link Analysis results
+  analyzedPalette: undefined,
+  analyzedTone: undefined,
+  analyzedSections: undefined,
+
   // Images/Docs
   productImages: [],
   sourceDocs: {
@@ -53,5 +58,11 @@ export const useAppStore = create<AppState>((set) => ({
   })),
   
   generatedCopy: null,
-  setGeneratedCopy: (data) => set({ generatedCopy: data })
+  setGeneratedCopy: (data) => set({ generatedCopy: data }),
+  
+  setAnalysisResults: (data) => set({
+    analyzedPalette: data.palette,
+    analyzedTone: data.tone,
+    analyzedSections: data.sections
+  })
 }));
