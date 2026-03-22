@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { SectionData, AppState, StepLevel, StyleTheme } from '../types';
+import type { AppState } from '../types';
 
 export const useAppStore = create<AppState>((set) => ({
   currentStep: 0,

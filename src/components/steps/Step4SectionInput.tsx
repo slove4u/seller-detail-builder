@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { ArrowRight, Type, MapPin, Search, Star, Box, Link } from 'lucide-react';
+import { ArrowRight, Type, Box } from 'lucide-react';
 
 export const Step4SectionInput: React.FC = () => {
   const { setCurrentStep, sectionInputs, setSectionInput } = useAppStore();

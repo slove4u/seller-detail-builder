@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppStore } from '../../store/useAppStore';
-import { ArrowRight, Wand2 } from 'lucide-react';
+import { Wand2 } from 'lucide-react';
 
 export const Step5ImageAssign: React.FC = () => {
   const { setCurrentStep, productImages, layoutSlots, setLayoutSlot } = useAppStore();

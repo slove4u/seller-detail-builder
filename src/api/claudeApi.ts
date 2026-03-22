@@ -127,7 +127,7 @@ export const generateCopy = async (params: CopyGenParams) => {
  * 2. 원본 자료 데이터 추출 API (Vision)
  * 이미지(인증서, 메모 등)에서 필요한 텍스트 정보를 JSON으로 파싱.
  */
-export const analyzeMaterial = async (type: string, imageBase64: string, category: string) => {
+export const analyzeMaterial = async (type: string, _imageBase64: string, _category: string) => {
   if (!CLAUDE_API_KEY) {
     console.log("Mocking analyzeMaterial");
     // 모의 데이터
