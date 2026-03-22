@@ -132,31 +132,63 @@ export const Step7Result: React.FC = () => {
     }
   };
 
-  // 이미지 저장 로직
+  // 이미지 저장 로직 (CORS 문제 해결 버전)
   const handleSaveImage = async () => {
     const element = document.getElementById('result-page');
-    if (!element) return;
+    if (!element) {
+      alert('저장할 페이지를 찾을 수 없습니다.');
+      return;
+    }
+
     try {
       setSaveLoading(true);
+
+      // 외부 이미지 전부 base64로 변환 (CORS 우회)
+      const images = element.querySelectorAll('img');
+      const imagePromises = Array.from(images).map(async (img) => {
+        if (img.src.startsWith('http') && !img.src.startsWith(window.location.origin)) {
+          try {
+            // CORS 프록시 서비스 이용
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(img.src)}`;
+            const response = await fetch(proxyUrl);
+            const blob = await response.blob();
+            const base64 = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+            img.src = base64;
+          } catch (e) {
+            console.warn('이미지 변환 실패, 원본 유지:', img.src);
+            // 캡처 시 에러 방지를 위해 allowTaint: true와 useCORS: true를 병행
+          }
+        }
+      });
+      await Promise.all(imagePromises);
+
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: styleTone === 'light' ? '#fdfaf5' : '#0a0a0a',
-        scrollY: -window.scrollY,
+        scrollY: 0,
         windowWidth: element.scrollWidth,
         windowHeight: element.scrollHeight,
-        imageTimeout: 20000,
+        logging: false,
+        imageTimeout: 30000, // 충분한 시간 확보
         onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.getElementById('result-page');
-          if (clonedElement) {
-            clonedElement.style.transform = 'none';
-            clonedElement.style.maxHeight = 'none';
-            clonedElement.style.overflow = 'visible';
-            clonedElement.style.borderRadius = '0';
+          const el = clonedDoc.getElementById('result-page');
+          if (el) {
+            el.style.transform = 'none';
+            el.style.maxHeight = 'none';
+            el.style.overflow = 'visible';
+            el.style.position = 'relative';
+            el.style.borderRadius = '0';
           }
         }
       });
+
+      // PNG 다운로드
       const link = document.createElement('a');
       link.download = `상세페이지_${new Date().toISOString().slice(0,10)}.png`;
       link.href = canvas.toDataURL('image/png', 1.0);
@@ -266,7 +298,7 @@ export const Step7Result: React.FC = () => {
                 {generatedCopy?.story?.headline || '우리의 진심'}
               </h3>
               <p contentEditable suppressContentEditableWarning className="text-sm leading-relaxed outline-none font-medium text-white/80">
-                {generatedCopy?.story?.body || store.category + '의 새로운 기준.'}
+                {generatedCopy?.story?.body || category + '의 새로운 기준.'}
               </p>
             </div>
           </div>
