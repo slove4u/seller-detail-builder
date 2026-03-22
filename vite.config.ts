@@ -97,7 +97,7 @@ HTML: ${htmlText}
                    throw new Error(`Claude error: ${claudeRes.status}`);
                  }
              
-                 const data = await claudeRes.json();
+                 const data = (await claudeRes.json()) as any;
                  const text = data.content[0].text;
                  const clean = text.replace(/\`\`\`json|\`\`\`/g, "").trim();
                  
